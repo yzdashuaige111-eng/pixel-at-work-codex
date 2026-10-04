@@ -192,6 +192,8 @@ public class OverlayWindow : Window {
     readonly JavaScriptSerializer json=new JavaScriptSerializer();
     readonly WebView2CompositionControl view=new WebView2CompositionControl();
     readonly DispatcherTimer timer=new DispatcherTimer();
+    readonly PlacementController placementController=new PlacementController();
+    readonly int overlayPid=Process.GetCurrentProcess().Id;
     OverlayConfig config;
     SessionReader reader;
     Forms.NotifyIcon tray;
@@ -284,7 +286,7 @@ public class OverlayWindow : Window {
         menu.Items.Add("显示 / 隐藏（Ctrl+Alt+O）",null,delegate { paused=!paused; });
         menu.Items.Add("定位：鼠标放输入框顶边中间，按 Ctrl+Alt+P",null,delegate { tray.ShowBalloonTip(7000,"定位悬浮条","将鼠标移到输入框顶边中间，按 Ctrl+Alt+P。Ctrl+Alt+方向键微调。",Forms.ToolTipIcon.Info); });
         menu.Items.Add("重新读取这条会话",null,delegate { reader=new SessionReader(config.codexHome,config.threadId); sent=""; });
-        menu.Items.Add("自动对齐输入框",null,delegate { config.manualAnchor=false; config.offsetXDip=0; config.offsetYDip=0; inputAfter=DateTime.MinValue; Save(); });
+        menu.Items.Add("自动对齐输入框",null,delegate { config.manualAnchor=false; config.offsetXDip=0; config.offsetYDip=0; inputAfter=DateTime.MinValue; placementController.Reset(); Save(); });
         menu.Items.Add("绑定最近活动的 Codex 会话",null,delegate {
             try {
                 var latest=Directory.EnumerateFiles(Path.Combine(config.codexHome,"sessions"),"*.jsonl",SearchOption.AllDirectories).OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault();
@@ -322,9 +324,11 @@ public class OverlayWindow : Window {
                     config.centerX=Math.Max(0.05,Math.Min(0.95,(double)(p.X-r.Left)/(r.Right-r.Left)));
                     config.bottomDip=Math.Max(20,(r.Bottom-p.Y)/scale+6);
                     config.manualAnchor=true;
+                    placementController.Reset();
                     paused=false; Save();
                 }
                 if(id>=3 && id<=6) {
+                    placementController.Reset();
                     if(config.manualAnchor) {
                         if(id==3) config.centerX-=12*scale/(r.Right-r.Left);
                         if(id==5) config.centerX+=12*scale/(r.Right-r.Left);
@@ -368,6 +372,7 @@ public class OverlayWindow : Window {
             target=found; targetPid=foundPid;
             Native.SetWindowLongPtr(handle,-8,target);
             layout=new LayoutSnapshot(); composerElement=null; inputAfter=DateTime.MinValue;
+            placementController.Reset();
             Log("attached conversation window pid="+targetPid);
         }
     }
@@ -375,7 +380,7 @@ public class OverlayWindow : Window {
         if(readingInput || DateTime.UtcNow<inputAfter || target==IntPtr.Zero) return;
         // Invalidate a moved/replaced composer before the background scan finishes.
         try {
-            if(composerElement!=null && (composerElement.Current.IsOffscreen || composerElement.Current.BoundingRectangle!=editBounds)) {
+            if(composerElement!=null && (composerElement.Current.IsOffscreen || LargeChange(composerElement.Current.BoundingRectangle,editBounds))) {
                 layout=new LayoutSnapshot(); composerElement=null; if(IsVisible) Hide();
             }
         } catch { layout=new LayoutSnapshot(); composerElement=null; if(IsVisible) Hide(); }
@@ -389,9 +394,9 @@ public class OverlayWindow : Window {
                     var root=AutomationElement.FromHandle(window);
                     var condition=new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.Edit);
                     var edits=root.FindAll(TreeScope.Descendants,condition);
-                    foreach(AutomationElement e in edits) {
+                    foreach(AutomationElement e in edits) { try {
                         var current=e.Current;
-                        if(current.IsOffscreen || !(current.ClassName??"").Split(' ').Contains("ProseMirror")) continue;
+                        if(current.ProcessId==overlayPid || current.IsOffscreen || !(current.ClassName??"").Split(' ').Contains("ProseMirror")) continue;
                         var r=current.BoundingRectangle;
                         if(r.IsEmpty || r.Width<100 || r.Height<10) continue;
                         var parent=TreeWalker.ControlViewWalker.GetParent(e);
@@ -400,7 +405,7 @@ public class OverlayWindow : Window {
                             if(!p.IsEmpty && p.Width>=r.Width && p.Width<r.Width+200 && p.Height<700 && p.Top<=r.Top) r=p;
                         }
                         if(next.composer.IsEmpty || r.Top>next.composer.Top) { next.composer=r; selected=e; selectedEdit=current.BoundingRectangle; }
-                    }
+                    } catch(ElementNotAvailableException) { /* Only this replaced control is skipped. */ } }
                     if(selected==null) return next;
                     var ancestor=TreeWalker.ControlViewWalker.GetParent(selected);
                     for(int i=0;i<12 && ancestor!=null;i++,ancestor=TreeWalker.ControlViewWalker.GetParent(ancestor)) {
@@ -411,16 +416,36 @@ public class OverlayWindow : Window {
                     }
                     if(next.viewport.IsEmpty) return new LayoutSnapshot();
                     var types=new [] { ControlType.Text,ControlType.Button,ControlType.Hyperlink,ControlType.Image,ControlType.Edit,ControlType.ComboBox,ControlType.CheckBox };
-                    var obstacles=root.FindAll(TreeScope.Descendants,new OrCondition(types.Select(t=>(System.Windows.Automation.Condition)new PropertyCondition(AutomationElement.ControlTypeProperty,t)).ToArray()));
-                    foreach(AutomationElement e in obstacles) {
+                    // Owned overlay windows appear in the host's UIA tree. Keep
+                    // root-level host menus in the scan, but exclude our window
+                    // and its descendants so it never becomes its own obstacle.
+                    var hostControls=new AndCondition(new OrCondition(types.Select(t=>(System.Windows.Automation.Condition)new PropertyCondition(AutomationElement.ControlTypeProperty,t)).ToArray()),
+                        new NotCondition(new PropertyCondition(AutomationElement.ProcessIdProperty,overlayPid)));
+                    var obstacles=root.FindAll(TreeScope.Descendants,hostControls);
+                    foreach(AutomationElement e in obstacles) { try {
                         var current=e.Current; var bounds=current.BoundingRectangle;
+                        if(current.ProcessId!=targetPid && BelongsToOverlay(e)) continue;
                         if(!current.IsOffscreen && !bounds.IsEmpty && bounds.Width>0 && bounds.Height>0 && bounds.IntersectsWith(next.viewport)) next.obstacles.Add(bounds);
-                    }
+                    } catch(ElementNotAvailableException) { /* Streaming can replace unrelated nodes during a scan. */ } }
                     return next;
                 } catch { selected=null; return new LayoutSnapshot(); }
             });
             if(window==target) { layout=snapshot; composerElement=selected; editBounds=selectedEdit; }
         } finally { readingInput=false; }
+    }
+    bool BelongsToOverlay(AutomationElement element) {
+        for(int i=0;i<20 && element!=null;i++,element=TreeWalker.ControlViewWalker.GetParent(element)) {
+            var current=element.Current;
+            if(current.ProcessId==overlayPid || current.NativeWindowHandle==handle.ToInt64()) return true;
+            if(current.NativeWindowHandle==target.ToInt64()) return false;
+        }
+        return false;
+    }
+    bool LargeChange(Rect current,Rect before) {
+        if(current.IsEmpty || before.IsEmpty) return current!=before;
+        double tolerance=2*Math.Max(1,Native.GetDpiForWindow(target)/96.0);
+        return Math.Abs(current.X-before.X)>tolerance || Math.Abs(current.Y-before.Y)>tolerance
+            || Math.Abs(current.Width-before.Width)>tolerance || Math.Abs(current.Height-before.Height)>tolerance;
     }
     async Task Tick() {
         if(disposed || updating) return;
@@ -435,7 +460,7 @@ public class OverlayWindow : Window {
             if(!visible) placement.reason=paused?"user-hidden":!ready?"renderer-starting":"host-inactive";
             if(visible && Native.GetWindowRect(target,out r)) {
                 double scale=Math.Max(1,Native.GetDpiForWindow(target)/96.0);
-                placement=PlacementEngine.Choose(layout,new Rect(r.Left,r.Top,r.Right-r.Left,r.Bottom-r.Top),scale,config);
+                placement=placementController.Resolve(layout,new Rect(r.Left,r.Top,r.Right-r.Left,r.Bottom-r.Top),scale,config);
                 visible=placement.Visible;
             }
             if(visible) {
@@ -476,7 +501,7 @@ public static class Program {
     [STAThread] public static void Main(string[] args) {
         var folder=AppDomain.CurrentDomain.BaseDirectory;
         if(args.Length>0 && args[0]=="--self-test") {
-            try { PlacementTests.Run(); ReaderTests.Run(); File.AppendAllText(Path.Combine(folder,"self-test.txt"),"Passed: new-chat text avoidance, left/right gutters, missing composer, narrow layout, DPI, unsafe nudges and manual placement.\n"); }
+            try { PlacementTests.Run(); ReaderTests.Run(); File.AppendAllText(Path.Combine(folder,"self-test.txt"),"Passed: text avoidance, missing composer, narrow layout, DPI, safe anchor retention, minor UIA drift, real window movement, input growth and manual positioning.\n"); }
             catch(Exception e) {
                 File.WriteAllText(Path.Combine(folder,"self-test.txt"),"FAILED: "+e.Message);
                 Environment.Exit(1);

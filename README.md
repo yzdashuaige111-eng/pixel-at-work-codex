@@ -32,6 +32,8 @@ Windows x64 · transparent overlay · click-through · local session activity ·
 
 位置通过 Windows 可访问性边界跟随输入框，支持分栏和输入框高度变化。输入框上方没有文字或控件时显示完整场景；新聊天的欢迎文字、正文或菜单占据该位置时，收为输入框侧边的小机器人。没有输入框、没有足够空白空间或无法可靠识别界面时自动隐藏，不再使用旧坐标兜底。手动定位与微调也执行文字避让。
 
+已选中的安全位置会保持稳定。进入侧边模式后，任务状态改变或菜单消失不会使它自动跳回上方；窗口和输入框真正移动时才跟随调整。需要重新选择位置时，在托盘选择“自动对齐输入框”。
+
 ## 会话如何连接
 
 首次启动自动生成本地 config.json。Codex 数据位置取环境变量 CODEX_HOME，未设置时使用用户目录下的 .codex。会话取 CODEX_THREAD_ID，未设置时选择最近更新的本地会话记录。
@@ -57,7 +59,7 @@ config.json、status.json、diagnostic.log 和 browser-data 都保存在程序�
 在 PowerShell 中运行：
 
     .\build.ps1 -Test
-    .\package.ps1 -Version 0.2.0
+    .\package.ps1 -Version 0.2.1
 
 build-art.mjs 从保留的上游源码提取 SVG 场景，再应用独立的 mascot.ts。生成 artwork.js 后编译 WPF / WebView2 桌面程序。测试检查任务开始、工具调用与结果、失败状态、跨段 UTF-8 和任务结束，以及新聊天文字避让、左右侧边、无输入框、窄窗口、200% 缩放和位置微调。
 

@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/zhuoxingzhang/pixel-at-work",
+  "downloadDate": "2026-10-04",
+  "source": "hooks/register.tsx",
+  "sha256": "4E2938FF5B3E5C864FDE3A4C026998B4DBA30DAA57F3EE1E804F434C1E66A8F1",
+  "license": "MIT",
+  "sdk": "Microsoft.Web.WebView2 1.0.3537.50"
+}

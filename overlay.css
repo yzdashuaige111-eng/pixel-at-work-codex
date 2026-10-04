@@ -1,0 +1,8 @@
+:root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; user-select: none; pointer-events: none; }
+main { width: 100%; display: flex; flex-direction: column; align-items: center; }
+#scene { width: 100%; aspect-ratio: 216 / 28; overflow: hidden; }
+#scene svg { display: block; width: 100%; height: 100%; }
+#status { margin: 3px 0 0; max-width: 100%; padding: 2px 9px 3px; border-radius: 6px; background: #24211f; color: #f7f3e8; font-size: 11px; line-height: 15px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (prefers-reduced-motion: reduce) { #scene { opacity: 0.9; } }

@@ -185,63 +185,46 @@ function backdrop(w        )         {
   return s + crect(0, 24, w, 4, 'fl', '#808080', 0.1) + crect(0, 24, w, 1, 'ft', '#808080', 0.35)
 }
 
-// A mint pixel octopus with a speech-bubble badge. Original artwork, not an OpenAI logo.
-// Kept at the upstream 12 x 10 footprint so every prop, mood and holiday hat still fits.
-const BODY = [
-  '..LOOOOOOL..',
-  '.LOOOOOOOOL.',
-  '.OOOOOOOOOO.',
-  '.OOOOOOOOOO.',
-  'OOOOOOOOOOOO',
-  'OOOOOOOOOOOO',
-  '.OOOOOOOOOO.',
-  '..OOOOOOOO..',
-]
-const LEGS_A = ['O.O.O..O.O.O', 'O.O.O..O.O.O']
-const LEGS_B = ['.O.O.OO.O.O.', '.O.O.OO.O.O.']
-const BODY_PAL      = { O: C.o, L: C.ol }
+// Original conversation robot. New head, screen, torso, articulated arms and two feet.
+// Scene props remain MIT adaptations; this character does not use an OpenAI logo.
                                                                                 
+const ROBOT = { shell:'#f7faf8', edge:'#aebfb8', screen:'#152e28', lamp:'#10a37f', glow:'#a7e2d1' }
 
 function critter(x        , y        , mood       = 'awake')         {
-  let s = sprite(BODY, BODY_PAL, x, y)
-  const legs = (rows          ) => sprite(rows, BODY_PAL, x, y + 8)
-  s += mood === 'walk' || mood === 'panic'
-    ? frames([legs(LEGS_A), legs(LEGS_B)], mood === 'panic' ? 0.25 : 0.5)
-    : legs(LEGS_A)
-  if (mood !== 'panic') {
-    s += rect(x + 4, y + 5, 5, 2, '#f7faf8') + rect(x + 5, y + 7, 1, 1, '#f7faf8')
-    s += rect(x + 5, y + 5, 1, 1, C.o) + rect(x + 7, y + 5, 1, 1, C.o)
-  }
-  const open = rect(x + 3, y + 2, 1, 2, C.eye) + rect(x + 8, y + 2, 1, 2, C.eye)
-  const shut = rect(x + 2, y + 3, 2, 1, C.eye) + rect(x + 8, y + 3, 2, 1, C.eye)
-  if (mood === 'asleep') s += shut
-  else if (mood === 'panic') {
-    s += rect(x + 2, y + 1, 2, 2, C.white) + rect(x + 3, y + 2, 1, 1, C.eye)
-    s += rect(x + 8, y + 1, 2, 2, C.white) + rect(x + 8, y + 2, 1, 1, C.eye)
-    s += rect(x + 5, y + 4, 2, 2, C.eye)
-  } else if (mood === 'reading') {
-    s += path(rect(3, 2, 1, 2, C.eye) + rect(8, 2, 1, 2, C.eye), [[x,y],[x+1,y],[x+2,y],[x+1,y]], 2.4)
-  } else s += frames([open,open,open,open,open,open,open,shut], 3.2)
-  if (mood === 'typing') s += frames([rect(x+12,y+4,2,1,C.o),rect(x+12,y+5,2,1,C.o)], 0.3)
-  s += hat(x,y)
-  return mood === 'hop'
-    ? path(s.replace(/x="(\d+)"/g, (_,v) => 'x="'+(Number(v)-x)+'"')
-      .replace(/y="(\d+)"/g, (_,v) => 'y="'+(Number(v)-y)+'"'),
-      [[x,y],[x,y-2],[x,y-3],[x,y-2],[x,y],[x,y]], 0.9)
-    : s
+  const r = ROBOT
+  let s = rect(5,-2,1,2,r.edge) + rect(5,-3,2,1,mood==='panic'?C.amber:r.lamp)
+  // The stepped silhouette is a round head, separate from the smaller body.
+  s += rect(3,0,6,1,r.edge) + rect(2,1,8,4,r.edge) + rect(1,2,10,2,r.edge)
+  s += rect(3,1,6,3,r.shell) + rect(2,2,8,2,r.shell)
+  s += rect(3,1,6,3,r.screen)
+  const open = rect(4,2,1,2,r.glow) + rect(7,2,1,2,r.glow)
+  const shut = rect(4,3,2,1,r.edge) + rect(7,3,2,1,r.edge)
+  if(mood==='asleep') s += shut
+  else if(mood==='panic') s += rect(5,1,2,2,C.amber) + rect(5,3,2,1,r.shell)
+  else if(mood==='reading') s += path(rect(4,2,1,1,r.glow)+rect(7,2,1,1,r.glow),[[0,0],[0,1],[1,1],[0,1]],1.8)
+  else s += frames([open,open,open,shut,open],2.8)
+  s += rect(5,5,2,1,r.screen) + rect(4,6,4,2,r.edge) + rect(4,6,3,1,r.shell)
+  s += rect(5,6,2,1,mood==='asleep'?r.edge:r.lamp) + rect(5,7,1,1,r.lamp)
+  s += rect(2,5,1,1,r.screen) + rect(1,6,3,1,r.shell) + rect(9,5,1,1,r.screen)
+  if(mood==='typing') s += frames([rect(9,6,4,1,r.shell),rect(9,5,3,1,r.shell)+rect(11,6,2,1,r.edge)],0.4)
+  else s += rect(8,6,3,1,r.shell)
+  const feet = (step         ) => rect(4,8,1,1,r.edge)+rect(7,8,1,1,r.edge)
+    + rect(step?4:3,9,3,1,r.screen)+rect(step?6:7,9,3,1,r.screen)
+  s += mood==='walk'||mood==='panic' ? frames([feet(false),feet(true)],mood==='panic'?0.3:0.6) : feet(false)
+  s += hat(0,0)
+  return mood==='hop' ? path(s,[[x,y],[x,y-1],[x,y-2],[x,y],[x,y]],0.8) : shift(x,y,s)
 }
 
 function scChatThink()         {
   let s = critter(26,14)
-  const bubble = rect(47,2,23,11,'#f7faf8') + rect(46,3,25,9,'#f7faf8')
-    + rect(48,13,3,2,'#f7faf8') + rect(47,15,2,1,'#f7faf8')
-  s += bubble
-  s += rect(49,4,9,1,C.o) + rect(49,6,15,1,'#a7e2d1')
+  s += rect(47,2,23,11,ROBOT.shell) + rect(46,3,25,9,ROBOT.shell)
+    + rect(48,13,3,2,ROBOT.shell) + rect(47,15,2,1,ROBOT.shell)
+  s += rect(49,4,9,1,ROBOT.lamp) + rect(49,6,15,1,ROBOT.glow)
   s += frames([0,1,2,3].map(f => {
-    let p = f>0 ? rect(49,8,5+f*3,1,'#a7e2d1') : ''
-    for(let i=0;i<3;i++) p += rect(61+i*3,10-(i===f%3?1:0),1,1,C.eye)
+    let p = f>0 ? rect(49,8,5+f*3,1,ROBOT.glow) : ''
+    for(let i=0;i<3;i++) p += rect(61+i*3,10-(i===f%3?1:0),1,1,ROBOT.screen)
     return p
-  }), 1.2)
+  }),1.2)
   return s
 }
 
@@ -1319,14 +1302,14 @@ function skyline(x0        , R        )         {
   return s
 }
 
-const MINI = ['.OOOO.', 'OEOOEO', 'OOOOOO', '.OOOO.', '.O..O.']
+const MINI = ['.WWWW.', 'WBEEBW', '.WGGW.', '.W..W.', '.K..K.']
 
 /** Small helpers in front of the skyline, one per further running call, each carrying a crate of its kind. */
 function helpers(kinds          , x0        )         {
   return kinds
     .slice(0, 3)
     .map((k, i) => {
-      const body = sprite(MINI, { O: C.o, E: C.eye }) + rect(1, -2, 4, 2, CRATE[k] ?? C.gray)
+      const body = sprite(MINI, { W:'#f7faf8', B:'#152e28', E:'#a7e2d1', G:'#10a37f', K:'#152e28' }) + rect(1, -2, 4, 2, CRATE[k] ?? C.gray)
       const a = x0 + 1 + i * 3
       const b = x0 + 9 + i * 2
       return path(body, [...line(a, 19, b, 19, 4), ...line(b, 19, a, 19, 4).slice(1, -1)], 1.6 + i * 0.3, i * 0.4)
@@ -1419,6 +1402,11 @@ SCENES.think = scChatThink;
 window.PixelArtwork = {
   kinds: Object.keys(SCENES),
   mascot(mood = 'awake') { season = null; return critter(4, 4, mood); },
+  portrait(kind) {
+    season = null;
+    const mood = kind==='sleep'?'asleep':kind==='read'?'reading':kind==='bug'||kind==='fire'?'panic':kind==='party'?'hop':['code','shell','build','python','test'].includes(kind)?'typing':'awake';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" shape-rendering="crispEdges">'+critter(4,6,mood)+'</svg>';
+  },
   render(state) {
     lang = 'zh'; season = festival(new Date());
     const W = 216, L = Math.floor((W - STAGE) / 2);

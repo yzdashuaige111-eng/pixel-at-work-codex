@@ -5,7 +5,7 @@
 - Source: https://github.com/zhuoxingzhang/pixel-at-work
 - Copyright (c) 2026 Zhuoxing Zhang
 - License: MIT; original notice in upstream/LICENSE, or licenses/pixel-at-work-MIT.txt in the binary distribution.
-- Original hooks/register.tsx is preserved unchanged. The build extracts scene functions and replaces the mascot with the original mint chat design in mascot.ts.
+- Original hooks/register.tsx is preserved unchanged. The build extracts scene functions and replaces the central character with an independently drawn white conversation robot in mascot.ts, including a new silhouette, screen, limbs and motion. Small helper characters are replaced with corresponding robot sprites. Scene props, stage composition and holiday accessories remain MIT adaptations.
 
 ## Microsoft Edge WebView2 SDK
 

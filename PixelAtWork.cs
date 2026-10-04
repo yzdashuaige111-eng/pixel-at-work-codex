@@ -31,6 +31,7 @@ public class OverlayConfig {
 }
 
 public class Activity {
+    public string layout = "scene";
     public string kind = "idle";
     public string label = "等你发话";
     public List<Dictionary<string,object>> crates = new List<Dictionary<string,object>>();
@@ -200,7 +201,9 @@ public class OverlayWindow : Window {
     DateTime findAfter=DateTime.MinValue;
     int targetPid;
     int lastX=-1,lastY=-1,lastW=-1,lastH=-1;
-    Rect inputBounds=Rect.Empty;
+    LayoutSnapshot layout=new LayoutSnapshot();
+    AutomationElement composerElement;
+    Rect editBounds=Rect.Empty;
     DateTime inputAfter=DateTime.MinValue;
     bool readingInput;
     public OverlayWindow() {
@@ -364,21 +367,28 @@ public class OverlayWindow : Window {
         if(found!=IntPtr.Zero) {
             target=found; targetPid=foundPid;
             Native.SetWindowLongPtr(handle,-8,target);
-            inputBounds=Rect.Empty; inputAfter=DateTime.MinValue;
+            layout=new LayoutSnapshot(); composerElement=null; inputAfter=DateTime.MinValue;
             Log("attached conversation window pid="+targetPid);
         }
     }
     async Task ReadInputBounds() {
-        if(config.manualAnchor || readingInput || DateTime.UtcNow<inputAfter || target==IntPtr.Zero) return;
-        readingInput=true; inputAfter=DateTime.UtcNow.AddMilliseconds(1200);
+        if(readingInput || DateTime.UtcNow<inputAfter || target==IntPtr.Zero) return;
+        // Invalidate a moved/replaced composer before the background scan finishes.
+        try {
+            if(composerElement!=null && (composerElement.Current.IsOffscreen || composerElement.Current.BoundingRectangle!=editBounds)) {
+                layout=new LayoutSnapshot(); composerElement=null; if(IsVisible) Hide();
+            }
+        } catch { layout=new LayoutSnapshot(); composerElement=null; if(IsVisible) Hide(); }
+        readingInput=true; inputAfter=DateTime.UtcNow.AddMilliseconds(300);
         var window=target;
         try {
-            var rect=await Task.Run(delegate {
+            AutomationElement selected=null; Rect selectedEdit=Rect.Empty;
+            var snapshot=await Task.Run(delegate {
+                var next=new LayoutSnapshot();
                 try {
                     var root=AutomationElement.FromHandle(window);
                     var condition=new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.Edit);
                     var edits=root.FindAll(TreeScope.Descendants,condition);
-                    Rect found=Rect.Empty;
                     foreach(AutomationElement e in edits) {
                         var current=e.Current;
                         if(current.IsOffscreen || !(current.ClassName??"").Split(' ').Contains("ProseMirror")) continue;
@@ -389,12 +399,27 @@ public class OverlayWindow : Window {
                             var p=parent.Current.BoundingRectangle;
                             if(!p.IsEmpty && p.Width>=r.Width && p.Width<r.Width+200 && p.Height<700 && p.Top<=r.Top) r=p;
                         }
-                        if(found.IsEmpty || r.Top>found.Top) found=r;
+                        if(next.composer.IsEmpty || r.Top>next.composer.Top) { next.composer=r; selected=e; selectedEdit=current.BoundingRectangle; }
                     }
-                    return found;
-                } catch { return Rect.Empty; }
+                    if(selected==null) return next;
+                    var ancestor=TreeWalker.ControlViewWalker.GetParent(selected);
+                    for(int i=0;i<12 && ancestor!=null;i++,ancestor=TreeWalker.ControlViewWalker.GetParent(ancestor)) {
+                        var bounds=ancestor.Current.BoundingRectangle;
+                        if(!bounds.IsEmpty && bounds.Contains(next.composer) && bounds.Width>=next.composer.Width+80 && bounds.Height>=next.composer.Height+40) {
+                            next.viewport=bounds; break;
+                        }
+                    }
+                    if(next.viewport.IsEmpty) return new LayoutSnapshot();
+                    var types=new [] { ControlType.Text,ControlType.Button,ControlType.Hyperlink,ControlType.Image,ControlType.Edit,ControlType.ComboBox,ControlType.CheckBox };
+                    var obstacles=root.FindAll(TreeScope.Descendants,new OrCondition(types.Select(t=>(System.Windows.Automation.Condition)new PropertyCondition(AutomationElement.ControlTypeProperty,t)).ToArray()));
+                    foreach(AutomationElement e in obstacles) {
+                        var current=e.Current; var bounds=current.BoundingRectangle;
+                        if(!current.IsOffscreen && !bounds.IsEmpty && bounds.Width>0 && bounds.Height>0 && bounds.IntersectsWith(next.viewport)) next.obstacles.Add(bounds);
+                    }
+                    return next;
+                } catch { selected=null; return new LayoutSnapshot(); }
             });
-            if(window==target) inputBounds=rect;
+            if(window==target) { layout=snapshot; composerElement=selected; editBounds=selectedEdit; }
         } finally { readingInput=false; }
     }
     async Task Tick() {
@@ -405,23 +430,17 @@ public class OverlayWindow : Window {
             await ReadInputBounds();
             Native.Rect r;
             uint foregroundPid; Native.GetWindowThreadProcessId(Native.GetForegroundWindow(),out foregroundPid);
-            bool visible=!paused && target!=IntPtr.Zero && !Native.IsIconic(target) && foregroundPid==targetPid && Native.GetWindowRect(target,out r);
+            bool visible=ready && !paused && target!=IntPtr.Zero && !Native.IsIconic(target) && foregroundPid==targetPid && Native.GetAncestor(Native.GetForegroundWindow(),2)==target && Native.GetWindowRect(target,out r);
+            var placement=new Placement();
+            if(!visible) placement.reason=paused?"user-hidden":!ready?"renderer-starting":"host-inactive";
             if(visible && Native.GetWindowRect(target,out r)) {
                 double scale=Math.Max(1,Native.GetDpiForWindow(target)/96.0);
-                double dipWidth=Math.Min(config.widthDip,(r.Right-r.Left)/scale-24);
-                int width=(int)Math.Round(Math.Max(180,dipWidth)*scale);
-                int height=(int)Math.Ceiling((Math.Max(180,dipWidth)*28/216+29)*scale);
-                int x=(int)Math.Round(r.Left+(r.Right-r.Left)*config.centerX-width/2.0);
-                int y=(int)Math.Round(r.Bottom-config.bottomDip*scale-height);
-                if(!config.manualAnchor && !inputBounds.IsEmpty) {
-                    dipWidth=Math.Min(config.widthDip,inputBounds.Width/scale-24);
-                    width=(int)Math.Round(Math.Max(180,dipWidth)*scale);
-                    height=(int)Math.Ceiling((Math.Max(180,dipWidth)*28/216+29)*scale);
-                    x=(int)Math.Round(inputBounds.Left+inputBounds.Width/2-width/2.0+config.offsetXDip*scale);
-                    y=(int)Math.Round(inputBounds.Top-8*scale-height+config.offsetYDip*scale);
-                }
-                x=Math.Max(r.Left+8,Math.Min(r.Right-width-8,x));
-                y=Math.Max(r.Top+40,Math.Min(r.Bottom-height-16,y));
+                placement=PlacementEngine.Choose(layout,new Rect(r.Left,r.Top,r.Right-r.Left,r.Bottom-r.Top),scale,config);
+                visible=placement.Visible;
+            }
+            if(visible) {
+                int x=(int)Math.Round(placement.bounds.Left),y=(int)Math.Round(placement.bounds.Top);
+                int width=(int)Math.Round(placement.bounds.Width),height=(int)Math.Round(placement.bounds.Height);
                 if(!IsVisible) Show();
                 if(x!=lastX || y!=lastY || width!=lastW || height!=lastH) {
                     Native.SetWindowPos(handle,new IntPtr(-1),x,y,width,height,0x10|0x40);
@@ -429,17 +448,18 @@ public class OverlayWindow : Window {
                 }
             } else if(IsVisible) Hide();
             var state=reader.Poll();
+            state.layout=placement.mode;
             string serialized=json.Serialize(state);
             if(ready && serialized!=sent) {
                 await view.CoreWebView2.ExecuteScriptAsync("window.setReducedMotion("+json.Serialize(config.reducedMotion)+");window.updateState("+serialized+")");
                 sent=serialized;
             }
-            string summary=json.Serialize(new { visible=visible, rendererReady=ready, automaticAnchor=!config.manualAnchor&&!inputBounds.IsEmpty, kind=state.kind,label=state.label,x=lastX,y=lastY,width=lastW,height=lastH,windowPid=targetPid,windowHandle=target.ToInt64(),threadId=config.threadId });
+            string summary=json.Serialize(new { visible=visible, rendererReady=ready, automaticAnchor=!config.manualAnchor&&!layout.composer.IsEmpty, layout=placement.mode, placementReason=placement.reason, kind=state.kind,label=state.label,x=lastX,y=lastY,width=lastW,height=lastH,windowPid=targetPid,windowHandle=target.ToInt64(),threadId=config.threadId });
             if(summary!=diagnostic) {
                 File.WriteAllText(Path.Combine(folder,"status.json"),summary,new UTF8Encoding(false));
                 diagnostic=summary;
             }
-        } catch(Exception e) { Log("update failure "+e.GetType().Name); }
+        } catch(Exception e) { if(IsVisible) Hide(); layout=new LayoutSnapshot(); Log("update failure "+e.GetType().Name); }
         finally { updating=false; }
     }
     void Cleanup() {
@@ -456,7 +476,7 @@ public static class Program {
     [STAThread] public static void Main(string[] args) {
         var folder=AppDomain.CurrentDomain.BaseDirectory;
         if(args.Length>0 && args[0]=="--self-test") {
-            try { ReaderTests.Run(); }
+            try { PlacementTests.Run(); ReaderTests.Run(); File.AppendAllText(Path.Combine(folder,"self-test.txt"),"Passed: new-chat text avoidance, left/right gutters, missing composer, narrow layout, DPI, unsafe nudges and manual placement.\n"); }
             catch(Exception e) {
                 File.WriteAllText(Path.Combine(folder,"self-test.txt"),"FAILED: "+e.Message);
                 Environment.Exit(1);

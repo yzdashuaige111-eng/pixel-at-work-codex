@@ -13,7 +13,7 @@ const kinds = [['think','消息气泡 · 动态输入点'],['read','阅读 · �
 const html = [
   '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>Pixel at Work — scene preview</title>',
   '<style>*{box-sizing:border-box}body{margin:0;padding:26px 32px;background:#17251f;color:#f7faf8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}h1{font-size:23px;line-height:30px;margin:0 0 3px}p{font-size:12px;color:#bfd6ca;margin:0}.poses{display:flex;gap:50px;align-items:center;justify-content:center;margin:7px 0 16px}.poses figure{width:128px;text-align:center;margin:0}.poses svg{display:block;width:128px;height:128px}figcaption{font-size:12px;line-height:18px;color:#d8eade}.scenes{display:grid;grid-template-columns:1fr 1fr;gap:18px 30px}.scenes figure{margin:0;padding-top:10px;border-top:1px solid #365547}.scenes svg{display:block;width:100%;height:auto}.scenes figcaption{margin-bottom:6px}.foot{margin-top:16px;font-size:11px;color:#bfd6ca}</style>',
-  '<h1>Pixel at Work for Codex</h1><p>薄荷绿小章鱼 · 原创对话气泡 · 场景演示</p><div class="poses">',
+  '<h1>Pixel at Work for Codex</h1><p>原创对话机器人 · 白色圆头 / 黑色面屏 / 绿色对话灯</p><div class="poses">',
   ...poses.map(([mood,label])=>'<figure>'+portrait(mood)+'<figcaption>'+label+'</figcaption></figure>'),
   '</div><div class="scenes">',
   ...kinds.map(([kind,label])=>'<figure><figcaption>'+label+'</figcaption>'+art.render({kind,crates:[],helpers:[]})+'</figure>'),

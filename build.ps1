@@ -25,6 +25,7 @@ $references = @(
 $argsList = @('/nologo','/target:winexe','/platform:x64','/optimize+','/utf8output',('/out:'+(Join-Path $base 'PixelAtWork.exe')),('/win32manifest:'+(Join-Path $base 'app.manifest')))
 foreach ($reference in $references) { $argsList += '/reference:'+$reference }
 $argsList += Join-Path $base 'PixelAtWork.cs'
+$argsList += Join-Path $base 'Placement.cs'
 & (Join-Path $framework 'csc.exe') $argsList
 if ($LASTEXITCODE -ne 0) { throw 'Desktop build failed' }
 if ($Test) {

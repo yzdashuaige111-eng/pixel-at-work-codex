@@ -1,18 +1,18 @@
 # Pixel at Work for Codex
 
-A tiny mint pixel octopus that works above your Codex / ChatGPT desktop composer.
+A tiny original conversation robot beside your Codex / ChatGPT desktop composer.
 
 Windows x64 · transparent overlay · click-through · local session activity · MIT
 
-![Mint mascot and activity scenes](docs/preview.png)
+![Original robot and activity scenes](docs/preview.png)
 
-这是一个 Windows 桌面悬浮伴侣：小章鱼会随 Codex 的阅读、编辑、查资料、运行工具等活动切换动画。薄荷绿角色、白色对话气泡和动态输入点让它更有聊天助手的感觉。保留原作的读书、打字、眨眼、走路、睡觉及节日装饰。
+这是一个 Windows 桌面悬浮伴侣：小机器人会随 Codex 的阅读、编辑、查资料、运行工具等活动切换动画。中央角色与辅助机器人均重新设计，具有白色圆头、黑色面屏、绿色对话灯、双臂和双脚；眨眼、读屏、打字、行走和跳跃使用新的角色动作。场景道具与节日装饰延续原作，并保留 MIT 署名。
 
 ## 下载与启动
 
 1. 到 [Releases](https://github.com/yzdashuaige111-eng/pixel-at-work-codex/releases/latest) 下载 Windows x64 压缩包。
 2. 解压到一个可以写入文件的文件夹，双击“启动悬浮条.vbs”或 PixelAtWork.exe。
-3. 打开 Codex / ChatGPT 桌面应用。悬浮条自动出现在输入框上方。
+3. 打开 Codex / ChatGPT 桌面应用。动画自动出现在输入框附近的空白位置。
 
 运行环境：Windows 10/11 x64、.NET Framework 4.8、Microsoft Edge WebView2 Runtime。只支持 Windows x64；macOS 与 Linux 尚未支持。压缩包包含 WebView2 SDK 的必要文件，浏览器运行时需已安装。
 
@@ -28,7 +28,9 @@ Windows x64 · transparent overlay · click-through · local session activity ·
 | 切换状态来源 | 托盘 → 绑定最近活动的 Codex 会话 |
 | 退出 | 托盘 → 退出悬浮条 |
 
-图案和透明区域都让鼠标点击穿透，不抢输入焦点。切换到其他应用或最小化主窗口时隐藏。位置通过 Windows 可访问性边界跟随输入框，支持分栏和输入框高度变化；无法识别时可以手动定位。
+图案和透明区域都让鼠标点击穿透，不抢输入焦点。切换到其他应用或最小化主窗口时隐藏。
+
+位置通过 Windows 可访问性边界跟随输入框，支持分栏和输入框高度变化。输入框上方没有文字或控件时显示完整场景；新聊天的欢迎文字、正文或菜单占据该位置时，收为输入框侧边的小机器人。没有输入框、没有足够空白空间或无法可靠识别界面时自动隐藏，不再使用旧坐标兜底。手动定位与微调也执行文字避让。
 
 ## 会话如何连接
 
@@ -55,16 +57,16 @@ config.json、status.json、diagnostic.log 和 browser-data 都保存在程序�
 在 PowerShell 中运行：
 
     .\build.ps1 -Test
-    .\package.ps1 -Version 0.1.0
+    .\package.ps1 -Version 0.2.0
 
-build-art.mjs 从保留的上游源码提取 SVG 场景，再应用独立的 mascot.ts。生成 artwork.js 后编译 WPF / WebView2 桌面程序。测试检查任务开始、工具调用与结果、失败状态、跨段 UTF-8 和任务结束。
+build-art.mjs 从保留的上游源码提取 SVG 场景，再应用独立的 mascot.ts。生成 artwork.js 后编译 WPF / WebView2 桌面程序。测试检查任务开始、工具调用与结果、失败状态、跨段 UTF-8 和任务结束，以及新聊天文字避让、左右侧边、无输入框、窄窗口、200% 缩放和位置微调。
 
 package.ps1 按明确的文件清单生成压缩包，附依赖许可证与 CHECKSUMS.txt；不会打包本地会话配置、缓存或屏幕截图。
 
 ## 致谢与许可
 
-场景、动作与奥克兰天际线源自 [zhuoxingzhang/pixel-at-work](https://github.com/zhuoxingzhang/pixel-at-work)，作者 Zhuoxing Zhang，MIT 许可证。原始源码未改动，位于 upstream，校验记录见 source-provenance.json。
+场景道具、场景编排与奥克兰天际线源自 [zhuoxingzhang/pixel-at-work](https://github.com/zhuoxingzhang/pixel-at-work)，作者 Zhuoxing Zhang，MIT 许可证。原始源码未改动，位于 upstream，校验记录见 source-provenance.json。
 
-本项目新增 Windows 悬浮宿主、Codex 会话适配、薄荷绿对话章鱼和聊天气泡场景，采用 MIT 许可证。WebView2 的许可单独保留，见 THIRD_PARTY_NOTICES.md。
+本项目新增 Windows 悬浮宿主、Codex 会话适配、原创对话机器人、聊天气泡场景和文字避让，采用 MIT 许可证。WebView2 的许可单独保留，见 THIRD_PARTY_NOTICES.md。
 
-这是独立社区项目，与 OpenAI 无隶属关系，也不是官方插件。ChatGPT、Codex 等名称用于说明兼容目标；小章鱼和对话图案为原创像素设计。
+这是独立社区项目，与 OpenAI 无隶属关系，也不是官方插件。ChatGPT、Codex 等名称用于说明兼容目标；机器人和对话图案为原创像素设计，未使用官方徽标。

@@ -1,12 +1,36 @@
-# Pixel at Work for Codex
+<p align="center"><sub>A LITTLE COMPANY WHILE YOU BUILD</sub></p>
 
-A tiny original conversation robot beside your Codex / ChatGPT desktop composer.
+<h1 align="center">Pixel at Work <sub>for Codex</sub></h1>
 
-Windows x64 · transparent overlay · click-through · local session activity · MIT
+<p align="center"><strong>让 Codex 的工作状态，变成桌边小机器人的日常。</strong><br>
+A tiny conversation robot beside your desktop composer.</p>
 
-![Original robot and activity scenes](docs/preview.png)
+<p align="center">
+  <a href="https://github.com/yzdashuaige111-eng/pixel-at-work-codex/releases/latest"><strong>下载 Windows x64 →</strong></a>
+  &nbsp;·&nbsp; <a href="#下载与启动">快速开始</a>
+  &nbsp;·&nbsp; <a href="#控制">快捷操作</a>
+  &nbsp;·&nbsp; <a href="#会话如何连接">连接说明</a>
+</p>
 
-这是一个 Windows 桌面悬浮伴侣：小机器人会随 Codex 的阅读、编辑、查资料、运行工具等活动切换动画。中央角色与辅助机器人均重新设计，具有白色圆头、黑色面屏、绿色对话灯、双臂和双脚；眨眼、读屏、打字、行走和跳跃使用新的角色动作。场景道具与节日装饰延续原作，并保留 MIT 署名。
+<p align="center"><sub>Windows 10/11 x64 &nbsp; / &nbsp; 透明悬浮 &nbsp; / &nbsp; 鼠标穿透 &nbsp; / &nbsp; MIT</sub></p>
+
+<p align="center">
+  <img src="docs/preview.png" alt="Pixel at Work 原创白色圆头机器人与活动场景预览。" width="100%">
+</p>
+
+<p align="center"><sub>阅读、编辑、查资料、运行工具，让等待多一点趣味。</sub></p>
+
+Windows 桌面悬浮伴侣，显示在 Codex / ChatGPT 桌面输入框附近。**活动状态来自本地 Codex 会话记录**；普通 ChatGPT 聊天不一定产生这些记录。本项目是独立社区项目，与 OpenAI 无隶属关系，也不是官方插件。
+
+---
+
+## 一个小伙伴，三件小事
+
+| 看见进展 | 留出空间 | 数据留在本地 |
+| --- | --- | --- |
+| 根据阅读、编辑、测试、完成与失败等活动切换动画 | 跟随输入框、避让文字，透明区域与角色均可点击穿透 | 悬浮程序不上传会话内容，图案只接收活动类别与完成状态 |
+
+中央角色与辅助机器人均重新设计，具有白色圆头、黑色面屏、绿色对话灯、双臂和双脚；眨眼、读屏、打字、行走和跳跃使用新的角色动作。场景道具与节日装饰延续原作，并保留 MIT 署名。
 
 ## 下载与启动
 
@@ -30,9 +54,15 @@ Windows x64 · transparent overlay · click-through · local session activity ·
 
 图案和透明区域都让鼠标点击穿透，不抢输入焦点。切换到其他应用或最小化主窗口时隐藏。
 
+<details>
+<summary><strong>定位与避让规则</strong></summary>
+
 位置通过 Windows 可访问性边界跟随输入框，支持分栏和输入框高度变化。输入框上方没有文字或控件时显示完整场景；新聊天的欢迎文字、正文或菜单占据该位置时，收为输入框侧边的小机器人。没有输入框、没有足够空白空间或无法可靠识别界面时自动隐藏，不再使用旧坐标兜底。手动定位与微调也执行文字避让。
 
 已选中的安全位置会保持稳定。进入侧边模式后，任务状态改变或菜单消失不会使它自动跳回上方；窗口和输入框真正移动时才跟随调整。需要重新选择位置时，在托盘选择“自动对齐输入框”。
+
+
+</details>
 
 ## 会话如何连接
 
@@ -40,7 +70,7 @@ Windows x64 · transparent overlay · click-through · local session activity ·
 
 **位置跟随桌面窗口，活动跟随绑定的 Codex 会话。** 切换聊天不会自动重新绑定。多任务同时运行时，“最近活动”可能是后台任务；如需精确绑定，可编辑 config.json 中的 threadId 后重启。
 
-配置示例见 config.example.json。codexHome 和 threadId 留空会在启动时自动检测；也可以分别填入自己的 Codex 数据目录和会话 ID。
+配置示例见 [config.example.json](config.example.json)。codexHome 和 threadId 留空会在启动时自动检测；也可以分别填入自己的 Codex 数据目录和会话 ID。
 
 工具状态来自 Codex 的本地会话记录。普通 ChatGPT 聊天不一定产生这些记录。记录格式及桌面控件结构并非稳定的公开插件接口，应用更新后可能需要适配。“正在处理”只表示任务尚未结束；合并工具调用按可见名称归类，无法保证每个子调用都有独立动画。
 
@@ -58,8 +88,10 @@ config.json、status.json、diagnostic.log 和 browser-data 都保存在程序�
 
 在 PowerShell 中运行：
 
-    .\build.ps1 -Test
-    .\package.ps1 -Version 0.2.1
+```powershell
+.\build.ps1 -Test
+.\package.ps1 -Version 0.2.1
+```
 
 build-art.mjs 从保留的上游源码提取 SVG 场景，再应用独立的 mascot.ts。生成 artwork.js 后编译 WPF / WebView2 桌面程序。测试检查任务开始、工具调用与结果、失败状态、跨段 UTF-8 和任务结束，以及新聊天文字避让、左右侧边、无输入框、窄窗口、200% 缩放和位置微调。
 

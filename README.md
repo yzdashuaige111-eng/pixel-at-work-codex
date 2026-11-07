@@ -34,9 +34,11 @@ Windows 桌面悬浮伴侣，显示在 Codex / ChatGPT 桌面输入框附近。*
 
 ## 下载与启动
 
-1. 到 [Releases](https://github.com/yzdashuaige111-eng/pixel-at-work-codex/releases/latest) 下载 Windows x64 压缩包。
+1. 到 [Releases](https://github.com/yzdashuaige111-eng/pixel-at-work-codex/releases/latest) 下载 Windows x64 压缩包。当前公开发行版为 [v0.2.1](https://github.com/yzdashuaige111-eng/pixel-at-work-codex/releases/tag/v0.2.1)，文件名为 `PixelAtWork-Codex-v0.2.1-windows-x64.zip`。
 2. 解压到一个可以写入文件的文件夹，双击“启动悬浮条.vbs”或 PixelAtWork.exe。
 3. 打开 Codex / ChatGPT 桌面应用。动画自动出现在输入框附近的空白位置。
+
+发行页的 `CHECKSUMS.txt` 提供压缩包 SHA-256；可在 PowerShell 中运行 `Get-FileHash .\PixelAtWork-Codex-v0.2.1-windows-x64.zip -Algorithm SHA256` 后比对。
 
 运行环境：Windows 10/11 x64、.NET Framework 4.8、Microsoft Edge WebView2 Runtime。只支持 Windows x64；macOS 与 Linux 尚未支持。压缩包包含 WebView2 SDK 的必要文件，浏览器运行时需已安装。
 
@@ -82,6 +84,15 @@ Windows 桌面悬浮伴侣，显示在 Codex / ChatGPT 桌面输入框附近。*
 
 config.json、status.json、diagnostic.log 和 browser-data 都保存在程序目录。它们属于本地运行数据，不随仓库或发行包分发。动画与演示完全离线；从源码构建首次会下载固定版本的 WebView2 SDK，并检查 SHA-256。
 
+## 常见问题
+
+- **启动后没有角色**： 先确认主窗口已打开且可见，检查托盘显示/隐藏状态，再选择“自动对齐输入框”。没有输入框、空间不足或界面无法可靠识别时，程序会自动隐藏。
+- **活动与当前聊天不匹配**： 活动来源是绑定的 Codex 会话。使用托盘“绑定最近活动的 Codex 会话”，或修改 `config.json` 的 `threadId` 后重启；多个任务并行时需核对会话。
+- **角色一直安静**： 普通 ChatGPT 聊天不一定写入本地 Codex 会话记录；也可检查托盘的“减少动画”和 [配置示例](config.example.json)。
+- **提示启动失败**： 检查 Edge WebView2 Runtime、完整解压的程序文件和同目录 `diagnostic.log`；程序目录需要可写。
+
+问题可提交到 [Issues](https://github.com/yzdashuaige111-eng/pixel-at-work-codex/issues)，注明版本、Windows 缩放、复现步骤和会话绑定方式。分享日志前检查个人路径与会话标识。
+
 ## 从源码构建
 
 需要 Node.js 24，以及 Windows 自带的 .NET Framework C# 编译器。
@@ -97,10 +108,19 @@ build-art.mjs 从保留的上游源码提取 SVG 场景，再应用独立的 mas
 
 package.ps1 按明确的文件清单生成压缩包，附依赖许可证与 CHECKSUMS.txt；不会打包本地会话配置、缓存或屏幕截图。
 
+## 源码导航
+
+| 入口 | 内容 |
+| --- | --- |
+| [PixelAtWork.cs](PixelAtWork.cs) · [Placement.cs](Placement.cs) | 桌面宿主、会话读取与位置避让 |
+| [mascot.ts](mascot.ts) · [build-art.mjs](build-art.mjs) | 原创角色与动画生成 |
+| [config.example.json](config.example.json) | 本地配置字段 |
+| [source-provenance.json](source-provenance.json) · [第三方声明](THIRD_PARTY_NOTICES.md) | 上游来源与依赖许可 |
+
 ## 致谢与许可
 
 场景道具、场景编排与奥克兰天际线源自 [zhuoxingzhang/pixel-at-work](https://github.com/zhuoxingzhang/pixel-at-work)，作者 Zhuoxing Zhang，MIT 许可证。原始源码未改动，位于 upstream，校验记录见 source-provenance.json。
 
-本项目新增 Windows 悬浮宿主、Codex 会话适配、原创对话机器人、聊天气泡场景和文字避让，采用 MIT 许可证。WebView2 的许可单独保留，见 THIRD_PARTY_NOTICES.md。
+本项目新增 Windows 悬浮宿主、Codex 会话适配、原创对话机器人、聊天气泡场景和文字避让，采用 MIT 许可证。WebView2 的许可单独保留，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 这是独立社区项目，与 OpenAI 无隶属关系，也不是官方插件。ChatGPT、Codex 等名称用于说明兼容目标；机器人和对话图案为原创像素设计，未使用官方徽标。
